@@ -64,12 +64,17 @@ func newRun(opts Options, model string, contextLength int) run {
 			{name: bench.PhaseWarmup, label: "warm-up"},
 			{name: bench.PhasePrefill4K, label: "prefill 4K"},
 			{name: bench.PhasePrefill16K, label: "prefill 16K"},
+			{name: bench.PhasePrefill32K, label: "prefill 32K"},
 			{name: bench.PhasePrefill64K, label: "prefill 64K"},
+			{name: bench.PhasePrefill96K, label: "prefill 96K"},
 			{name: bench.PhasePrefill128K, label: "prefill 128K"},
 			{name: bench.PhaseDecodeGreedy, label: "decode greedy (5 runs)"},
 			{name: bench.PhaseDecode4K, label: "decode 4K (5 runs)"},
 			{name: bench.PhaseDecode16K, label: "decode 16K (5 runs)"},
+			{name: bench.PhaseDecode32K, label: "decode 32K (5 runs)"},
 			{name: bench.PhaseDecode64K, label: "decode 64K (5 runs)"},
+			{name: bench.PhaseDecode96K, label: "decode 96K (2 runs)"},
+			{name: bench.PhaseDecode128K, label: "decode 128K (2 runs)"},
 		},
 	}
 }

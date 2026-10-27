@@ -20,7 +20,9 @@ func summaryView(res *bench.Result) string {
 	for _, k := range []struct{ key, label string }{
 		{"4000", "prefill 4K"},
 		{"16000", "prefill 16K"},
+		{"32000", "prefill 32K"},
 		{"64000", "prefill 64K"},
+		{"96000", "prefill 96K"},
 		{"128000", "prefill 128K"},
 	} {
 		if reason, ok := res.Skipped[k.key]; ok {
@@ -44,7 +46,10 @@ func summaryView(res *bench.Result) string {
 	for _, k := range []struct{ key, label string }{
 		{"4000", "decode 4K"},
 		{"16000", "decode 16K"},
+		{"32000", "decode 32K"},
 		{"64000", "decode 64K"},
+		{"96000", "decode 96K"},
+		{"128000", "decode 128K"},
 	} {
 		if reason, ok := res.DecodeAtContextSkipped[k.key]; ok {
 			b.WriteString(fmt.Sprintf("%-12s %s\n", k.label, subtleStyle.Render(reason)))

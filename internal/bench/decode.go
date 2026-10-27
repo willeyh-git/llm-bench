@@ -51,22 +51,22 @@ func decodeRun(s *StreamResult) DecodeRun {
 }
 
 func MeasureDecode(ctx context.Context, base, model string) (DecodeResult, error) {
-	return measureDecode(ctx, base, model, decodeMessages)
+	return measureDecode(ctx, base, model, decodeRuns, decodeMessages)
 }
 
-func MeasureDecodeAt(ctx context.Context, base, model string, target int) (DecodeResult, error) {
+func MeasureDecodeAt(ctx context.Context, base, model string, target, runs int) (DecodeResult, error) {
 	ctxText, err := BuildContext(target)
 	if err != nil {
 		return DecodeResult{}, err
 	}
-	return measureDecode(ctx, base, model, func() ([]Message, error) {
+	return measureDecode(ctx, base, model, runs, func() ([]Message, error) {
 		return decodeContextMessages(ctxText)
 	})
 }
 
-func measureDecode(ctx context.Context, base, model string, build func() ([]Message, error)) (DecodeResult, error) {
+func measureDecode(ctx context.Context, base, model string, runs int, build func() ([]Message, error)) (DecodeResult, error) {
 	var res DecodeResult
-	for i := 0; i < decodeRuns; i++ {
+	for i := 0; i < runs; i++ {
 		msgs, err := build()
 		if err != nil {
 			return res, err

@@ -82,7 +82,7 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{PhaseWarmup, PhasePrefill4K, PhasePrefill16K, PhasePrefill64K, PhasePrefill128K, PhaseDecodeGreedy, PhaseDecode4K, PhaseDecode16K, PhaseDecode64K}
+	want := []string{PhaseWarmup, PhasePrefill4K, PhasePrefill16K, PhasePrefill32K, PhasePrefill64K, PhasePrefill96K, PhasePrefill128K, PhaseDecodeGreedy, PhaseDecode4K, PhaseDecode16K, PhaseDecode32K, PhaseDecode64K, PhaseDecode96K, PhaseDecode128K}
 	if strings.Join(starts, ",") != strings.Join(want, ",") {
 		t.Fatalf("phase order = %v, want %v", starts, want)
 	}
@@ -107,13 +107,23 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 		t.Errorf("corpus = %v", decoded["corpus"])
 	}
 	prefill, _ := decoded["prefill"].(map[string]any)
-	for _, k := range []string{"4000", "16000", "64000", "128000"} {
+	for _, k := range []string{"4000", "16000", "32000", "64000", "96000", "128000"} {
 		if _, ok := prefill[k]; !ok {
 			t.Errorf("prefill missing %s", k)
 		}
 	}
 	if len(res.Decode.Runs) != decodeRuns {
 		t.Errorf("decode runs = %d, want %d", len(res.Decode.Runs), decodeRuns)
+	}
+	for _, d := range decodeSizes {
+		dc, ok := res.DecodeAtContext[fmt.Sprint(d.target)]
+		if !ok {
+			t.Errorf("decode at %d missing", d.target)
+			continue
+		}
+		if len(dc.Runs) != d.runs {
+			t.Errorf("decode at %d runs = %d, want %d", d.target, len(dc.Runs), d.runs)
+		}
 	}
 	if res.Path != out {
 		t.Errorf("path = %q, want %q", res.Path, out)
@@ -230,7 +240,7 @@ func TestRunnerSkipsSizesAboveContextLength(t *testing.T) {
 	if _, ok := res.Prefill["16000"]; !ok {
 		t.Error("16K prefill fits 32768 and must run")
 	}
-	for _, k := range []string{"64000", "128000"} {
+	for _, k := range []string{"32000", "64000", "96000", "128000"} {
 		if _, ok := res.Prefill[k]; ok {
 			t.Errorf("prefill %s must be skipped above context_length", k)
 		}
@@ -243,13 +253,15 @@ func TestRunnerSkipsSizesAboveContextLength(t *testing.T) {
 			t.Errorf("decode at %s fits 32768 and must run", k)
 		}
 	}
-	if _, ok := res.DecodeAtContext["64000"]; ok {
-		t.Error("decode at 64000 must be skipped above context_length")
+	for _, k := range []string{"32000", "64000", "96000", "128000"} {
+		if _, ok := res.DecodeAtContext[k]; ok {
+			t.Errorf("decode at %s must be skipped above context_length", k)
+		}
+		if _, ok := res.DecodeAtContextSkipped[k]; !ok {
+			t.Errorf("decode at %s missing skip reason", k)
+		}
 	}
-	if _, ok := res.DecodeAtContextSkipped["64000"]; !ok {
-		t.Error("decode at 64000 missing skip reason")
-	}
-	want := []string{PhasePrefill64K, PhasePrefill128K, PhaseDecode64K}
+	want := []string{PhasePrefill32K, PhasePrefill64K, PhasePrefill96K, PhasePrefill128K, PhaseDecode32K, PhaseDecode64K, PhaseDecode96K, PhaseDecode128K}
 	if strings.Join(skipped, ",") != strings.Join(want, ",") {
 		t.Fatalf("skipped phases = %v, want %v", skipped, want)
 	}

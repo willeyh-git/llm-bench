@@ -275,4 +275,14 @@ Greedy decode is also measured after a prompt of each context size, so generatio
 - Build the decode prompt from the corpus with `BuildContext` in `internal/bench/decode.go`, with the system and user messages from `internal/bench/prompts.go`. Use a random nonce per run so the prefix cache cannot be reused.
 - Apply the skip rule with 512 output tokens for decode, not 256. Record skipped sizes in the result under a decode-by-context key, and show them as skipped on the run screen.
 - Add `internal/tui/run.go` phase lines for decode at 4K, 16K and 64K, and show them in `internal/tui/summary.go`.
-- Update the result JSON schema and tests for the skip rule, the window math on a context-sized decode, and the event order.</replace>
+- Update the result JSON schema and tests for the skip rule, the window math on a context-sized decode, and the event order.
+
+### ✓ Step 8: Add 32K and 96K sizes, and 2-run decode at 96K and 128K
+
+Prefill and context decode also run at 32K and 96K, and context decode also runs at 128K. Context decode at 96K and 128K uses 2 runs instead of 5. The skip rule and the 5% prompt overshoot margin still apply.
+
+- Add 32000 and 96000 to `prefillSizes` in `internal/bench/runner.go`, with phases `prefill_32k` and `prefill_96k`.
+- Add `decode_32k`, `decode_96k` and `decode_128k` to `decodeSizes`, each with its run count: 5 for 4K, 16K, 32K and 64K, and 2 for 96K and 128K. Pass the run count through `MeasureDecodeAt` in `internal/bench/decode.go`.
+- Keep the warm-up at 600,000 characters, which does not overlap the largest prompt (128K needs 544,000 characters).
+- Add the new phase lines to `internal/tui/run.go` and the new rows to `internal/tui/summary.go`.
+- Update the phase-order and skip-rule tests in `internal/bench/runner_test.go`, and add a test for the run counts.</replace>

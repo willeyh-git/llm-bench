@@ -37,23 +37,45 @@ const (
 	PhaseWarmup       = "warmup"
 	PhasePrefill4K    = "prefill_4k"
 	PhasePrefill16K   = "prefill_16k"
+	PhasePrefill32K   = "prefill_32k"
 	PhasePrefill64K   = "prefill_64k"
+	PhasePrefill96K   = "prefill_96k"
 	PhasePrefill128K  = "prefill_128k"
 	PhaseDecodeGreedy = "decode_greedy"
 	PhaseDecode4K     = "decode_4k"
 	PhaseDecode16K    = "decode_16k"
+	PhaseDecode32K    = "decode_32k"
 	PhaseDecode64K    = "decode_64k"
+	PhaseDecode96K    = "decode_96k"
+	PhaseDecode128K   = "decode_128k"
 )
+
+const decodeRunsLongContext = 2
 
 var decodeSizes = []struct {
 	phase  string
 	target int
-}{{PhaseDecode4K, 4000}, {PhaseDecode16K, 16000}, {PhaseDecode64K, 64000}}
+	runs   int
+}{
+	{PhaseDecode4K, 4000, decodeRuns},
+	{PhaseDecode16K, 16000, decodeRuns},
+	{PhaseDecode32K, 32000, decodeRuns},
+	{PhaseDecode64K, 64000, decodeRuns},
+	{PhaseDecode96K, 96000, decodeRunsLongContext},
+	{PhaseDecode128K, 128000, decodeRunsLongContext},
+}
 
 var prefillSizes = []struct {
 	phase  string
 	target int
-}{{PhasePrefill4K, 4000}, {PhasePrefill16K, 16000}, {PhasePrefill64K, 64000}, {PhasePrefill128K, 128000}}
+}{
+	{PhasePrefill4K, 4000},
+	{PhasePrefill16K, 16000},
+	{PhasePrefill32K, 32000},
+	{PhasePrefill64K, 64000},
+	{PhasePrefill96K, 96000},
+	{PhasePrefill128K, 128000},
+}
 
 type Result struct {
 	Schema                 int                      `json:"schema"`
@@ -207,7 +229,7 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 			continue
 		}
 		data, err := r.phase(ctx, d.phase, func() (any, error) {
-			return MeasureDecodeAt(ctx, r.Base, r.Model, d.target)
+			return MeasureDecodeAt(ctx, r.Base, r.Model, d.target, d.runs)
 		})
 		var sk skipError
 		if errors.As(err, &sk) {
