@@ -1,0 +1,270 @@
+{
+  "schema": 1,
+  "model": "KAT-Coder-V2.5 REAP",
+  "started_at": "2026-10-27T12:57:26.916983Z",
+  "prefill": {
+    "16000": {
+      "target": 16000,
+      "prompt_tokens": 16285,
+      "ttft_seconds": 8.199460792,
+      "tps": 1986.1062102874923,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (non-Qwen model)"
+      ]
+    },
+    "32000": {
+      "target": 32000,
+      "prompt_tokens": 32686,
+      "ttft_seconds": 17.350968041,
+      "tps": 1883.814201188292,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (no reference count for this size)"
+      ]
+    },
+    "4000": {
+      "target": 4000,
+      "prompt_tokens": 4133,
+      "ttft_seconds": 2.342045458,
+      "tps": 1764.6967465479486,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (non-Qwen model)"
+      ]
+    },
+    "64000": {
+      "target": 64000,
+      "prompt_tokens": 65374,
+      "ttft_seconds": 39.032693792,
+      "tps": 1674.85237755737,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (no reference count for this size)"
+      ]
+    },
+    "96000": {
+      "target": 96000,
+      "prompt_tokens": 98508,
+      "ttft_seconds": 67.954671333,
+      "tps": 1449.6133682595382,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (no reference count for this size)"
+      ]
+    }
+  },
+  "skipped": {
+    "128000": "skipped: server rejected the prompt: prefill 128000: HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (131070 tokens) exceeds the available context size (128000 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":131070,\"n_ctx\":128000}}"
+  },
+  "decode": {
+    "runs": [
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "tps_window": 92.73289726679937,
+        "tps_end_to_end": 87.71630429092468
+      },
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "tps_window": 92.85886853263081,
+        "tps_end_to_end": 87.96172310400013
+      },
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "tps_window": 91.92216287057576,
+        "tps_end_to_end": 87.42738897853707
+      },
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "tps_window": 92.77729323886355,
+        "tps_end_to_end": 88.32623406905759
+      },
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "tps_window": 91.37521561054527,
+        "tps_end_to_end": 87.03672999962683
+      }
+    ],
+    "tps_median": 92.73289726679937,
+    "tps_min": 91.37521561054527,
+    "tps_max": 92.85886853263081
+  },
+  "decode_at_context": {
+    "16000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 87.76077793657338,
+          "tps_end_to_end": 36.27173399044414
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 87.65976632677489,
+          "tps_end_to_end": 36.107257917702384
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 87.6127061048272,
+          "tps_end_to_end": 36.114508257196256
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 87.2885675428166,
+          "tps_end_to_end": 35.932860015298736
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 87.64483858919004,
+          "tps_end_to_end": 36.08076555720986
+        }
+      ],
+      "tps_median": 87.64483858919004,
+      "tps_min": 87.2885675428166,
+      "tps_max": 87.76077793657338
+    },
+    "32000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 83.12505570447422,
+          "tps_end_to_end": 21.61746174374241
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 83.33491685233467,
+          "tps_end_to_end": 21.66456306953124
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 84.1725294230571,
+          "tps_end_to_end": 21.720269655352343
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 83.18365945858893,
+          "tps_end_to_end": 21.668291938741852
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 83.81729152950277,
+          "tps_end_to_end": 21.67425995012575
+        }
+      ],
+      "tps_median": 83.33491685233467,
+      "tps_min": 83.12505570447422,
+      "tps_max": 84.1725294230571
+    },
+    "4000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 91.61570809105888,
+          "tps_end_to_end": 64.74796272397901
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 91.83182992221414,
+          "tps_end_to_end": 64.82243422988081
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 90.9204033532778,
+          "tps_end_to_end": 64.38432460179301
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 90.7919755308666,
+          "tps_end_to_end": 64.22358857941836
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 90.57521116037867,
+          "tps_end_to_end": 64.01539509167989
+        }
+      ],
+      "tps_median": 90.9204033532778,
+      "tps_min": 90.57521116037867,
+      "tps_max": 91.83182992221414
+    },
+    "64000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 77.03589866994422,
+          "tps_end_to_end": 11.19179045902297
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 76.50373912204142,
+          "tps_end_to_end": 11.15151605978276
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 76.67195864905565,
+          "tps_end_to_end": 11.138376357998125
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 76.86026496372881,
+          "tps_end_to_end": 11.13526715315926
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 76.6974749353636,
+          "tps_end_to_end": 11.132962747811192
+        }
+      ],
+      "tps_median": 76.6974749353636,
+      "tps_min": 76.50373912204142,
+      "tps_max": 77.03589866994422
+    },
+    "96000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 70.23179024417442,
+          "tps_end_to_end": 6.803420386980416
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "tps_window": 70.04036807283285,
+          "tps_end_to_end": 6.7938995873806185
+        }
+      ],
+      "tps_median": 70.13607915850363,
+      "tps_min": 70.04036807283285,
+      "tps_max": 70.23179024417442
+    }
+  },
+  "decode_at_context_skipped": {
+    "128000": "skipped: server rejected the prompt: decode run 1: HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (131079 tokens) exceeds the available context size (128000 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":131079,\"n_ctx\":128000}}"
+  },
+  "corpus": "58a7756fd94fc48a7b7306d330b2c44663bdf22faa943f82430966c2878081b2"
+}

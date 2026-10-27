@@ -7,7 +7,7 @@ The benchmark reproduces the prefill and greedy-decode measurements from the `be
 ## Features
 
 - Model picker that lists every model id the server reports, with its `loaded` or `unloaded` status.
-- Cold prefill measurements at 4K, 16K, 32K, 64K, 96K and 128K prompt tokens.
+- Cold prefill at 4K, 16K, 32K, 64K, 96K and 128K prompt tokens, taken from the first request of each context decode run at that size.
 - Greedy decode over 512 generated tokens, plus greedy decode after a corpus-sized prompt at 4K, 16K, 32K, 64K, 96K and 128K.
 - Automatic skipping of any size that does not fit the model's `context_length`, with the reason recorded.
 - A live run screen with one line per phase, and a summary card at the end.
@@ -78,10 +78,9 @@ A run executes these phases in order. Each phase is a line on the run screen wit
 | Phase | What it measures |
 | --- | --- |
 | warm-up | A request of about 2,700 tokens taken from a corpus offset that no timed prompt uses. Its result is not recorded. It primes the server and loads an unloaded model. |
-| prefill 4K, 16K, 32K, 64K, 96K, 128K | Cold prefill on a prompt of the given size. Each prompt has a random nonce, so the prefix cache cannot be reused. |
 | decode greedy (5 runs) | Five greedy 512-token generations on a short fixed prompt. The median, min and max are reported. |
-| decode 4K, 16K, 32K, 64K (5 runs each) | Five greedy 512-token generations after a corpus prompt of the given size. |
-| decode 96K, 128K (2 runs each) | Two greedy 512-token generations after a corpus prompt of the given size. These sizes use fewer runs because they are slow. |
+| prefill and decode 4K, 16K, 32K, 64K (5 runs each) | Five greedy 512-token generations after a cold corpus prompt of the given size. Each run has a random nonce, so the prefix cache cannot be reused. The TTFT and prompt tokens of each run give the prefill result for that size. |
+| prefill and decode 96K, 128K (2 runs each) | Two runs of the same kind. These sizes use fewer runs because they are slow, so their medians rest on two samples. |
 
 ### Metric definitions
 
@@ -94,7 +93,7 @@ Requests use these settings:
 
 - Thinking is off for every request, through `chat_template_kwargs.enable_thinking=false` and `reasoning_effort="none"`. Reasoning output therefore does not count as answer tokens.
 - Greedy decoding: `temperature=0`, `top_p=1`, `top_k=1`, `min_p=0`, `presence_penalty=0`, `frequency_penalty=0`, `repeat_penalty=1`.
-- Decode uses `max_tokens=512`. Prefill uses `max_tokens=256`, so the answer ends naturally.
+- Every request uses `max_tokens=512`. TTFT does not depend on `max_tokens`, so prefill numbers are taken from the context decode requests.
 - Streaming is on, and `stream_options.include_usage` is set so the server reports prompt and completion token counts.
 
 Prompts are cut from an embedded text corpus by character count, at 4.25 characters per token. Every run therefore gets identical text.
@@ -103,8 +102,7 @@ Prompts are cut from an embedded text corpus by character count, at 4.25 charact
 
 A prefill or decode size is skipped when it does not fit the model's `context_length`. The check adds a 5% margin for prompt-token overshoot, because the corpus-to-token ratio varies between tokenizers.
 
-- Prefill is skipped when the estimated prompt plus 256 output tokens is larger than `context_length`.
-- Decode at a corpus size is skipped when the estimated prompt plus 512 output tokens is larger than `context_length`.
+- A size is skipped when the estimated prompt plus 512 output tokens is larger than `context_length`. Prefill and decode at that size are skipped together.
 - If the server rejects a prompt for context overflow, that size is also recorded as skipped, with the server's message, and the run continues.
 
 A skipped size appears on the run screen and in the summary with its reason. The other sizes still run and are saved.
@@ -131,11 +129,11 @@ The file has these top-level keys:
 
 | Key | Contents |
 | --- | --- |
-| `schema` | Result schema version, currently `1`. |
+| `schema` | Result schema version, currently `2`. |
 | `model` | The model id. |
 | `started_at` | UTC start time of the run. |
-| `prefill` | Map from prompt size (`"4000"`, `"16000"`, and so on) to the prefill result: `target`, `prompt_tokens`, `ttft_seconds`, `tps`, `cached_tokens`, `invalid` and `flags`. |
-| `skipped` | Map from prefill size to the skip reason. Present only when something was skipped. |
+| `prefill` | Map from prompt size (`"4000"`, `"16000"`, and so on) to the prefill result: `target`, `prompt_tokens`, `ttft_seconds` (median), `ttft_samples` (one per run), `tps` (prompt tokens divided by the median TTFT), `cached_tokens`, `invalid` and `flags`. |
+| `skipped` | Map from size to the skip reason, for prefill and context decode. Present only when something was skipped. |
 | `decode` | The short-prompt greedy decode: `runs`, and `tps_median`, `tps_min`, `tps_max`, `invalid` and `flags`. |
 | `decode_at_context` | Map from context size to a decode result of the same shape. |
 | `decode_at_context_skipped` | Map from context size to the skip reason. Present only when something was skipped. |

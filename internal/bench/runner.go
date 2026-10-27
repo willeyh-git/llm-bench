@@ -14,7 +14,7 @@ import (
 	"github.com/willyhetland/llm-bencher/internal/server"
 )
 
-const resultSchema = 1
+const resultSchema = 2
 
 const promptOvershootPercent = 5
 
@@ -35,12 +35,6 @@ const (
 
 const (
 	PhaseWarmup       = "warmup"
-	PhasePrefill4K    = "prefill_4k"
-	PhasePrefill16K   = "prefill_16k"
-	PhasePrefill32K   = "prefill_32k"
-	PhasePrefill64K   = "prefill_64k"
-	PhasePrefill96K   = "prefill_96k"
-	PhasePrefill128K  = "prefill_128k"
 	PhaseDecodeGreedy = "decode_greedy"
 	PhaseDecode4K     = "decode_4k"
 	PhaseDecode16K    = "decode_16k"
@@ -63,18 +57,6 @@ var decodeSizes = []struct {
 	{PhaseDecode64K, 64000, decodeRuns},
 	{PhaseDecode96K, 96000, decodeRunsLongContext},
 	{PhaseDecode128K, 128000, decodeRunsLongContext},
-}
-
-var prefillSizes = []struct {
-	phase  string
-	target int
-}{
-	{PhasePrefill4K, 4000},
-	{PhasePrefill16K, 16000},
-	{PhasePrefill32K, 32000},
-	{PhasePrefill64K, 64000},
-	{PhasePrefill96K, 96000},
-	{PhasePrefill128K, 128000},
 }
 
 type Result struct {
@@ -191,28 +173,6 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 		return nil, err
 	}
 
-	for _, p := range prefillSizes {
-		if !fitsContext(p.target, prefillMaxTokens, r.ContextLength) {
-			reason := skipReason(p.target, prefillMaxTokens, r.ContextLength)
-			res.Skipped[fmt.Sprint(p.target)] = reason
-			r.emit(ctx, Event{Kind: EventSkipped, Phase: p.phase, Data: reason})
-			continue
-		}
-		data, err := r.phase(ctx, p.phase, func() (any, error) {
-			return MeasurePrefill(ctx, r.Base, r.Model, p.target)
-		})
-		var sk skipError
-		if errors.As(err, &sk) {
-			res.Skipped[fmt.Sprint(p.target)] = sk.reason
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		pr := data.(PrefillResult)
-		res.Prefill[fmt.Sprint(p.target)] = pr
-	}
-
 	data, err := r.phase(ctx, PhaseDecodeGreedy, func() (any, error) {
 		return MeasureDecode(ctx, r.Base, r.Model)
 	})
@@ -222,9 +182,11 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 	res.Decode = data.(DecodeResult)
 
 	for _, d := range decodeSizes {
+		key := fmt.Sprint(d.target)
 		if !fitsContext(d.target, decodeMaxTokens, r.ContextLength) {
 			reason := skipReason(d.target, decodeMaxTokens, r.ContextLength)
-			res.DecodeAtContextSkipped[fmt.Sprint(d.target)] = reason
+			res.Skipped[key] = reason
+			res.DecodeAtContextSkipped[key] = reason
 			r.emit(ctx, Event{Kind: EventSkipped, Phase: d.phase, Data: reason})
 			continue
 		}
@@ -233,13 +195,16 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 		})
 		var sk skipError
 		if errors.As(err, &sk) {
-			res.DecodeAtContextSkipped[fmt.Sprint(d.target)] = sk.reason
+			res.Skipped[key] = sk.reason
+			res.DecodeAtContextSkipped[key] = sk.reason
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		res.DecodeAtContext[fmt.Sprint(d.target)] = data.(DecodeResult)
+		cd := data.(ContextDecode)
+		res.DecodeAtContext[key] = cd.Decode
+		res.Prefill[key] = cd.Prefill
 	}
 
 	if err := ctx.Err(); err != nil {

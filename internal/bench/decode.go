@@ -33,10 +33,16 @@ func endToEndRate(tokens int, s *StreamResult) float64 {
 	return float64(tokens-1) / s.Total.Seconds()
 }
 
+type ContextDecode struct {
+	Decode  DecodeResult
+	Prefill PrefillResult
+}
+
 func decodeRun(s *StreamResult) DecodeRun {
-	run := DecodeRun{FinishReason: s.Finish, TPSWindow: windowRate(s.EventAt)}
+	run := DecodeRun{FinishReason: s.Finish, TTFTSeconds: s.TTFT.Seconds(), TPSWindow: windowRate(s.EventAt)}
 	if s.Usage != nil {
 		run.Tokens = s.Usage.CompletionTokens
+		run.PromptTokens = s.Usage.PromptTokens
 	} else {
 		run.Tokens = len(s.EventAt)
 	}
@@ -51,33 +57,40 @@ func decodeRun(s *StreamResult) DecodeRun {
 }
 
 func MeasureDecode(ctx context.Context, base, model string) (DecodeResult, error) {
-	return measureDecode(ctx, base, model, decodeRuns, decodeMessages)
+	res, _, err := measureDecode(ctx, base, model, decodeRuns, decodeMessages)
+	return res, err
 }
 
-func MeasureDecodeAt(ctx context.Context, base, model string, target, runs int) (DecodeResult, error) {
+func MeasureDecodeAt(ctx context.Context, base, model string, target, runs int) (ContextDecode, error) {
 	ctxText, err := BuildContext(target)
 	if err != nil {
-		return DecodeResult{}, err
+		return ContextDecode{}, err
 	}
-	return measureDecode(ctx, base, model, runs, func() ([]Message, error) {
+	res, streams, err := measureDecode(ctx, base, model, runs, func() ([]Message, error) {
 		return decodeContextMessages(ctxText)
 	})
+	if err != nil {
+		return ContextDecode{}, err
+	}
+	return ContextDecode{Decode: res, Prefill: prefillFromRuns(model, target, streams)}, nil
 }
 
-func measureDecode(ctx context.Context, base, model string, runs int, build func() ([]Message, error)) (DecodeResult, error) {
+func measureDecode(ctx context.Context, base, model string, runs int, build func() ([]Message, error)) (DecodeResult, []*StreamResult, error) {
 	var res DecodeResult
+	var streams []*StreamResult
 	for i := 0; i < runs; i++ {
 		msgs, err := build()
 		if err != nil {
-			return res, err
+			return res, nil, err
 		}
 		stream, err := StreamChat(ctx, base, greedyBody(model, msgs, decodeMaxTokens))
 		if err != nil {
-			return res, fmt.Errorf("decode run %d: %w", i+1, err)
+			return res, nil, fmt.Errorf("decode run %d: %w", i+1, err)
 		}
 		if stream.Reasoning != "" {
 			res.Invalid = append(res.Invalid, "reasoning output present, thinking was not disabled")
 		}
+		streams = append(streams, stream)
 		res.Runs = append(res.Runs, decodeRun(stream))
 	}
 	rates := make([]float64, len(res.Runs))
@@ -87,5 +100,5 @@ func measureDecode(ctx context.Context, base, model string, runs int, build func
 	res.TPSMedian = Median(rates)
 	res.TPSMin = Min(rates)
 	res.TPSMax = Max(rates)
-	return res, nil
+	return res, streams, nil
 }

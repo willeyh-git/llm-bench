@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 )
 
@@ -45,6 +46,36 @@ func MeasurePrefill(ctx context.Context, base, model string, target int) (Prefil
 		return res, fmt.Errorf("prefill %d: %w", target, err)
 	}
 	return validatePrefill(model, target, stream), nil
+}
+
+func prefillFromRuns(model string, target int, streams []*StreamResult) PrefillResult {
+	res := PrefillResult{Target: target}
+	for _, s := range streams {
+		run := validatePrefill(model, target, s)
+		res.TTFTSamples = append(res.TTFTSamples, run.TTFTSeconds)
+		if res.PromptTokens == 0 {
+			res.PromptTokens = run.PromptTokens
+		}
+		if run.CachedTokens > res.CachedTokens {
+			res.CachedTokens = run.CachedTokens
+		}
+		res.Invalid = appendUnique(res.Invalid, run.Invalid...)
+		res.Flags = appendUnique(res.Flags, run.Flags...)
+	}
+	res.TTFTSeconds = Median(res.TTFTSamples)
+	if res.PromptTokens > 0 && res.TTFTSeconds > 0 {
+		res.TPS = float64(res.PromptTokens) / res.TTFTSeconds
+	}
+	return res
+}
+
+func appendUnique(dst []string, src ...string) []string {
+	for _, s := range src {
+		if !slices.Contains(dst, s) {
+			dst = append(dst, s)
+		}
+	}
+	return dst
 }
 
 func validatePrefill(model string, target int, s *StreamResult) PrefillResult {

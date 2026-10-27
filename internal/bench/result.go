@@ -3,18 +3,21 @@ package bench
 import "sort"
 
 type PrefillResult struct {
-	Target       int      `json:"target"`
-	PromptTokens int      `json:"prompt_tokens"`
-	TTFTSeconds  float64  `json:"ttft_seconds"`
-	TPS          float64  `json:"tps"`
-	CachedTokens int      `json:"cached_tokens"`
-	Invalid      []string `json:"invalid,omitempty"`
-	Flags        []string `json:"flags,omitempty"`
+	Target       int       `json:"target"`
+	PromptTokens int       `json:"prompt_tokens"`
+	TTFTSeconds  float64   `json:"ttft_seconds"`
+	TTFTSamples  []float64 `json:"ttft_samples"`
+	TPS          float64   `json:"tps"`
+	CachedTokens int       `json:"cached_tokens"`
+	Invalid      []string  `json:"invalid,omitempty"`
+	Flags        []string  `json:"flags,omitempty"`
 }
 
 type DecodeRun struct {
 	Tokens       int      `json:"tokens"`
 	FinishReason string   `json:"finish_reason"`
+	TTFTSeconds  float64  `json:"ttft_seconds"`
+	PromptTokens int      `json:"prompt_tokens"`
 	TPSWindow    float64  `json:"tps_window"`
 	TPSEndToEnd  float64  `json:"tps_end_to_end"`
 	Flags        []string `json:"flags,omitempty"`

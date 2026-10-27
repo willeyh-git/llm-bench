@@ -25,35 +25,37 @@ func fakeServer(t *testing.T) *httptest.Server {
 		w.Header().Set("Content-Type", "text/event-stream")
 		maxTokens, _ := body["max_tokens"].(float64)
 		if maxTokens == decodeMaxTokens {
-			writeDecodeStream(w)
+			writeDecodeStream(w, body)
 			return
 		}
 		writePrefillStream(w, body)
 	}))
 }
 
-func writePrefillStream(w http.ResponseWriter, body map[string]any) {
-	prompt := 4133
+func promptTokens(body map[string]any) int {
 	msgs, _ := body["messages"].([]any)
-	if len(msgs) > 0 {
-		if sys, ok := msgs[0].(map[string]any); ok {
-			if c, _ := sys["content"].(string); len([]rune(c)) > 200000 {
-				prompt = int(float64(len([]rune(c))) / 4.25)
-			} else if len([]rune(c)) > 60000 {
-				prompt = 16286
-			}
-		}
+	if len(msgs) == 0 {
+		return 10
 	}
+	sys, ok := msgs[0].(map[string]any)
+	if !ok {
+		return 10
+	}
+	c, _ := sys["content"].(string)
+	return int(float64(len([]rune(c))) / 4.25)
+}
+
+func writePrefillStream(w http.ResponseWriter, body map[string]any) {
 	fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":null}]}\n\n")
-	fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":%d,\"completion_tokens\":1,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\n", prompt)
+	fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":%d,\"completion_tokens\":1,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\n", promptTokens(body))
 	fmt.Fprint(w, "data: [DONE]\n\n")
 }
 
-func writeDecodeStream(w http.ResponseWriter) {
+func writeDecodeStream(w http.ResponseWriter, body map[string]any) {
 	for i := 0; i < decodeMaxTokens; i++ {
 		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"x\"},\"finish_reason\":null}]}\n\n")
 	}
-	fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"length\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":512}}\n\n")
+	fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"length\"}],\"usage\":{\"prompt_tokens\":%d,\"completion_tokens\":512}}\n\n", promptTokens(body))
 	fmt.Fprint(w, "data: [DONE]\n\n")
 }
 
@@ -82,7 +84,7 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{PhaseWarmup, PhasePrefill4K, PhasePrefill16K, PhasePrefill32K, PhasePrefill64K, PhasePrefill96K, PhasePrefill128K, PhaseDecodeGreedy, PhaseDecode4K, PhaseDecode16K, PhaseDecode32K, PhaseDecode64K, PhaseDecode96K, PhaseDecode128K}
+	want := []string{PhaseWarmup, PhaseDecodeGreedy, PhaseDecode4K, PhaseDecode16K, PhaseDecode32K, PhaseDecode64K, PhaseDecode96K, PhaseDecode128K}
 	if strings.Join(starts, ",") != strings.Join(want, ",") {
 		t.Fatalf("phase order = %v, want %v", starts, want)
 	}
@@ -124,6 +126,17 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 		if len(dc.Runs) != d.runs {
 			t.Errorf("decode at %d runs = %d, want %d", d.target, len(dc.Runs), d.runs)
 		}
+		pr, ok := res.Prefill[fmt.Sprint(d.target)]
+		if !ok {
+			t.Errorf("prefill at %d missing: it must come from the decode runs", d.target)
+			continue
+		}
+		if len(pr.TTFTSamples) != d.runs {
+			t.Errorf("prefill at %d ttft samples = %d, want %d", d.target, len(pr.TTFTSamples), d.runs)
+		}
+		if pr.TTFTSeconds <= 0 || pr.PromptTokens <= 0 {
+			t.Errorf("prefill at %d has no timing: %+v", d.target, pr)
+		}
 	}
 	if res.Path != out {
 		t.Errorf("path = %q, want %q", res.Path, out)
@@ -159,12 +172,6 @@ func TestRunnerSkipsPrefillRejectedByServer(t *testing.T) {
 		}
 		var body map[string]any
 		decodeJSON(t, r, &body)
-		maxTokens, _ := body["max_tokens"].(float64)
-		if maxTokens == decodeMaxTokens {
-			w.Header().Set("Content-Type", "text/event-stream")
-			writeDecodeStream(w)
-			return
-		}
 		msgs, _ := body["messages"].([]any)
 		if len(msgs) > 0 {
 			if sys, ok := msgs[0].(map[string]any); ok {
@@ -175,6 +182,11 @@ func TestRunnerSkipsPrefillRejectedByServer(t *testing.T) {
 			}
 		}
 		w.Header().Set("Content-Type", "text/event-stream")
+		maxTokens, _ := body["max_tokens"].(float64)
+		if maxTokens == decodeMaxTokens {
+			writeDecodeStream(w, body)
+			return
+		}
 		writePrefillStream(w, body)
 	}))
 	defer srv.Close()
@@ -209,6 +221,9 @@ func TestRunnerSkipsPrefillRejectedByServer(t *testing.T) {
 		if _, ok := res.Prefill[k]; !ok {
 			t.Errorf("prefill %s missing", k)
 		}
+	}
+	if _, ok := res.Prefill["128000"]; ok {
+		t.Error("prefill 128000 must not be recorded when the server rejects it")
 	}
 }
 
@@ -261,7 +276,7 @@ func TestRunnerSkipsSizesAboveContextLength(t *testing.T) {
 			t.Errorf("decode at %s missing skip reason", k)
 		}
 	}
-	want := []string{PhasePrefill32K, PhasePrefill64K, PhasePrefill96K, PhasePrefill128K, PhaseDecode32K, PhaseDecode64K, PhaseDecode96K, PhaseDecode128K}
+	want := []string{PhaseDecode32K, PhaseDecode64K, PhaseDecode96K, PhaseDecode128K}
 	if strings.Join(skipped, ",") != strings.Join(want, ",") {
 		t.Fatalf("skipped phases = %v, want %v", skipped, want)
 	}

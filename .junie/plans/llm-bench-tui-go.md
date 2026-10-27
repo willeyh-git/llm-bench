@@ -257,7 +257,6 @@ A user can select a model, watch the four phases run, see the summary card, and 
 - Add an end-to-end test against an `httptest` fake server that checks event order and the JSON schema.
 
 ### ✓ Step 6: Add prefill at 64K and 128K
-
 Cold prefill is also measured at 64K and 128K tokens. A size that does not fit the model's `context_length` is skipped with a reason, so the run still completes and saves its JSON.
 
 - Read `context_length` from `GET /v1/models` into `ModelInfo`, and pass it to the runner.
@@ -268,7 +267,6 @@ Cold prefill is also measured at 64K and 128K tokens. A size that does not fit t
 - Update the summary card, the result JSON, and tests for the skip rule, the warm-up offset, and the event order.
 
 ### ✓ Step 7: Add greedy decode at 4K, 16K and 64K context
-
 Greedy decode is also measured after a prompt of each context size, so generation speed at long context is visible. A size whose target plus 512 output tokens exceeds `context_length` is skipped with a reason. The base decode on the short fixed prompt is kept.
 
 - Add `DecodeContextSizes` 4000, 16000 and 64000 to `internal/bench/runner.go`. Each size gets five greedy 512-token runs, the same method as the base decode, with the median, min and max.
@@ -278,11 +276,23 @@ Greedy decode is also measured after a prompt of each context size, so generatio
 - Update the result JSON schema and tests for the skip rule, the window math on a context-sized decode, and the event order.
 
 ### ✓ Step 8: Add 32K and 96K sizes, and 2-run decode at 96K and 128K
-
 Prefill and context decode also run at 32K and 96K, and context decode also runs at 128K. Context decode at 96K and 128K uses 2 runs instead of 5. The skip rule and the 5% prompt overshoot margin still apply.
 
 - Add 32000 and 96000 to `prefillSizes` in `internal/bench/runner.go`, with phases `prefill_32k` and `prefill_96k`.
 - Add `decode_32k`, `decode_96k` and `decode_128k` to `decodeSizes`, each with its run count: 5 for 4K, 16K, 32K and 64K, and 2 for 96K and 128K. Pass the run count through `MeasureDecodeAt` in `internal/bench/decode.go`.
 - Keep the warm-up at 600,000 characters, which does not overlap the largest prompt (128K needs 544,000 characters).
 - Add the new phase lines to `internal/tui/run.go` and the new rows to `internal/tui/summary.go`.
-- Update the phase-order and skip-rule tests in `internal/bench/runner_test.go`, and add a test for the run counts.</replace>
+- Update the phase-order and skip-rule tests in `internal/bench/runner_test.go`, and add a test for the run counts.
+
+### ✓ Step 9: Take prefill values from the context decode runs
+Prefill TTFT and prefill tok/s at 4K to 128K come from the decode-at-context requests, so no separate prefill requests are sent. The warm-up and the short-prompt decode stay as they are.
+
+- In `internal/bench/decode.go`, extend `DecodeRun` with `TTFTSeconds` and `PromptTokens`, filled from each `StreamResult` in `decodeRun`, so each context decode run keeps the cold-prefill numbers it already measures.
+- In `internal/bench/prefill.go`, reuse `validatePrefill` for each context decode run, so the usage, cached-token and reference checks apply to those runs too.
+- In `internal/bench/runner.go`, remove `prefillSizes` and the `PhasePrefill*` constants. Run warm-up, then decode greedy, then the decode-at-context sizes. For each size that runs, build `Result.Prefill[size]` from its runs.
+- Skip a size when `fitsContext` with 512 output tokens fails, in both the prefill and the decode result. This replaces the 256-token prefill check from Step 6 and Step 8. The 5% overshoot margin stays.
+- In `internal/bench/result.go`, `PrefillResult` gains `TTFTSamples []float64` with one value per run. `TTFTSeconds` is the median, and `TPS` is prompt tokens divided by the median TTFT. The `prefill` key and its other fields stay the same, and `resultSchema` moves from 1 to 2.
+- In `internal/tui/run.go`, remove the prefill phase lines. Each decode-at-context line shows the median TTFT and prefill tok/s next to its decode rate.
+- In `internal/tui/summary.go`, the prefill rows keep reading `Result.Prefill` by size, so no key changes are needed there.
+- Update `internal/bench/runner_test.go`: the phase order becomes warm-up, decode greedy, then decode 4K to 128K. Add a check that each size's `TTFTSamples` has one entry per run, and that prefill keys come from the decode runs.
+- Confirm the decode prompt's `prompt_tokens` at 4K and 16K still falls within ±1% of `referencePromptTokens`, because the decode prompt differs from the old prefill prompt. If it does not, re-measure the references before keeping the check.
