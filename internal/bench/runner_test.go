@@ -1,0 +1,214 @@
+package bench
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func fakeServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		decodeJSON(t, r, &body)
+		w.Header().Set("Content-Type", "text/event-stream")
+		maxTokens, _ := body["max_tokens"].(float64)
+		if maxTokens == decodeMaxTokens {
+			writeDecodeStream(w)
+			return
+		}
+		writePrefillStream(w, body)
+	}))
+}
+
+func writePrefillStream(w http.ResponseWriter, body map[string]any) {
+	prompt := 4133
+	msgs, _ := body["messages"].([]any)
+	if len(msgs) > 0 {
+		if sys, ok := msgs[0].(map[string]any); ok {
+			if c, _ := sys["content"].(string); len([]rune(c)) > 200000 {
+				prompt = int(float64(len([]rune(c))) / 4.25)
+			} else if len([]rune(c)) > 60000 {
+				prompt = 16286
+			}
+		}
+	}
+	fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":null}]}\n\n")
+	fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":%d,\"completion_tokens\":1,\"prompt_tokens_details\":{\"cached_tokens\":0}}}\n\n", prompt)
+	fmt.Fprint(w, "data: [DONE]\n\n")
+}
+
+func writeDecodeStream(w http.ResponseWriter) {
+	for i := 0; i < decodeMaxTokens; i++ {
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"x\"},\"finish_reason\":null}]}\n\n")
+	}
+	fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"length\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":512}}\n\n")
+	fmt.Fprint(w, "data: [DONE]\n\n")
+}
+
+func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
+	srv := fakeServer(t)
+	defer srv.Close()
+
+	out := filepath.Join(t.TempDir(), "run.json")
+	events := make(chan Event, 4)
+	runner := &Runner{Base: srv.URL + "/v1", Model: "Gemma-4-12B", Out: out, Events: events}
+
+	var starts []string
+	drained := make(chan struct{})
+	go func() {
+		defer close(drained)
+		for ev := range events {
+			if ev.Kind == EventPhaseStart {
+				starts = append(starts, ev.Phase)
+			}
+		}
+	}()
+
+	res, err := runner.Run(context.Background())
+	close(events)
+	<-drained
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{PhaseWarmup, PhasePrefill4K, PhasePrefill16K, PhasePrefill64K, PhasePrefill128K, PhaseDecodeGreedy, PhaseDecode4K, PhaseDecode16K, PhaseDecode64K}
+	if strings.Join(starts, ",") != strings.Join(want, ",") {
+		t.Fatalf("phase order = %v, want %v", starts, want)
+	}
+
+	raw, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("result file not written: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"schema", "model", "started_at", "prefill", "decode", "decode_at_context", "corpus"} {
+		if _, ok := decoded[key]; !ok {
+			t.Errorf("result JSON missing %q", key)
+		}
+	}
+	if decoded["schema"] != float64(resultSchema) {
+		t.Errorf("schema = %v", decoded["schema"])
+	}
+	if decoded["corpus"] != CorpusSHA256 {
+		t.Errorf("corpus = %v", decoded["corpus"])
+	}
+	prefill, _ := decoded["prefill"].(map[string]any)
+	for _, k := range []string{"4000", "16000", "64000", "128000"} {
+		if _, ok := prefill[k]; !ok {
+			t.Errorf("prefill missing %s", k)
+		}
+	}
+	if len(res.Decode.Runs) != decodeRuns {
+		t.Errorf("decode runs = %d, want %d", len(res.Decode.Runs), decodeRuns)
+	}
+	if res.Path != out {
+		t.Errorf("path = %q, want %q", res.Path, out)
+	}
+}
+
+func TestRunnerSkipsSizesAboveContextLength(t *testing.T) {
+	srv := fakeServer(t)
+	defer srv.Close()
+
+	out := filepath.Join(t.TempDir(), "skip.json")
+	events := make(chan Event, 16)
+	runner := &Runner{Base: srv.URL + "/v1", Model: "Devstral Small 2 24B", Out: out, ContextLength: 32768, Events: events}
+
+	var skipped []string
+	drained := make(chan struct{})
+	go func() {
+		defer close(drained)
+		for ev := range events {
+			if ev.Kind == EventSkipped {
+				skipped = append(skipped, ev.Phase)
+			}
+		}
+	}()
+
+	res, err := runner.Run(context.Background())
+	close(events)
+	<-drained
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := res.Prefill["16000"]; !ok {
+		t.Error("16K prefill fits 32768 and must run")
+	}
+	for _, k := range []string{"64000", "128000"} {
+		if _, ok := res.Prefill[k]; ok {
+			t.Errorf("prefill %s must be skipped above context_length", k)
+		}
+		if _, ok := res.Skipped[k]; !ok {
+			t.Errorf("prefill %s missing skip reason", k)
+		}
+	}
+	for _, k := range []string{"4000", "16000"} {
+		if _, ok := res.DecodeAtContext[k]; !ok {
+			t.Errorf("decode at %s fits 32768 and must run", k)
+		}
+	}
+	if _, ok := res.DecodeAtContext["64000"]; ok {
+		t.Error("decode at 64000 must be skipped above context_length")
+	}
+	if _, ok := res.DecodeAtContextSkipped["64000"]; !ok {
+		t.Error("decode at 64000 missing skip reason")
+	}
+	want := []string{PhasePrefill64K, PhasePrefill128K, PhaseDecode64K}
+	if strings.Join(skipped, ",") != strings.Join(want, ",") {
+		t.Fatalf("skipped phases = %v, want %v", skipped, want)
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Fatalf("result file not written: %v", err)
+	}
+}
+
+func TestRunnerCancelWritesNoFile(t *testing.T) {
+	srv := fakeServer(t)
+	defer srv.Close()
+
+	out := filepath.Join(t.TempDir(), "cancelled.json")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	runner := &Runner{Base: srv.URL + "/v1", Model: "Gemma-4-12B", Out: out}
+
+	if _, err := runner.Run(ctx); err == nil {
+		t.Fatal("expected error on cancelled context")
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Fatalf("result file must not exist after cancel, stat err = %v", err)
+	}
+}
+
+func TestRunnerServerDownWritesNoFile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "down", http.StatusServiceUnavailable)
+	}))
+	srv.Close()
+
+	out := filepath.Join(t.TempDir(), "down.json")
+	runner := &Runner{Base: srv.URL + "/v1", Model: "m", Out: out}
+	if _, err := runner.Run(context.Background()); err == nil {
+		t.Fatal("expected error when server is unreachable")
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Fatal("no partial result may be written")
+	}
+}
+
+func TestSlug(t *testing.T) {
+	if got := Slug("Devstral Small 2 24B"); got != "devstral-small-2-24b" {
+		t.Fatalf("slug = %q", got)
+	}
+	if got := Slug("PolyStrata: Qwen3.6 35B-A3B"); got != "polystrata-qwen3-6-35b-a3b" {
+		t.Fatalf("slug = %q", got)
+	}
+}
