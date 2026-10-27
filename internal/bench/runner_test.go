@@ -15,6 +15,11 @@ import (
 func fakeServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/models") {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"data":[{"id":"Gemma-4-12B","context_length":262144,"status":{"value":"loaded"}}]}`)
+			return
+		}
 		var body map[string]any
 		decodeJSON(t, r, &body)
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -112,6 +117,88 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 	}
 	if res.Path != out {
 		t.Errorf("path = %q, want %q", res.Path, out)
+	}
+}
+
+func TestFitsContextAllowsForPromptOvershoot(t *testing.T) {
+	cases := []struct {
+		target, out, ctxLen int
+		want                bool
+	}{
+		{128000, 256, 128000, false},
+		{128000, 256, 102400, false},
+		{128000, 256, 143360, true},
+		{64000, 512, 102400, true},
+		{16000, 256, 32768, true},
+		{64000, 512, 32768, false},
+		{128000, 256, 0, true},
+	}
+	for _, c := range cases {
+		if got := fitsContext(c.target, c.out, c.ctxLen); got != c.want {
+			t.Errorf("fitsContext(%d, %d, %d) = %v, want %v", c.target, c.out, c.ctxLen, got, c.want)
+		}
+	}
+}
+
+func TestRunnerSkipsPrefillRejectedByServer(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/models") {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"data":[{"id":"Qwen3.8-27B","context_length":143360,"status":{"value":"loaded"}}]}`)
+			return
+		}
+		var body map[string]any
+		decodeJSON(t, r, &body)
+		maxTokens, _ := body["max_tokens"].(float64)
+		if maxTokens == decodeMaxTokens {
+			w.Header().Set("Content-Type", "text/event-stream")
+			writeDecodeStream(w)
+			return
+		}
+		msgs, _ := body["messages"].([]any)
+		if len(msgs) > 0 {
+			if sys, ok := msgs[0].(map[string]any); ok {
+				if c, _ := sys["content"].(string); len([]rune(c)) > 500000 {
+					http.Error(w, `{"error":"request (131069 tokens) exceeds the available context size (128000 tokens), try increasing it"}`, http.StatusBadRequest)
+					return
+				}
+			}
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		writePrefillStream(w, body)
+	}))
+	defer srv.Close()
+
+	events := make(chan Event, 64)
+	var errorPhases []string
+	drained := make(chan struct{})
+	go func() {
+		defer close(drained)
+		for ev := range events {
+			if ev.Kind == EventError {
+				errorPhases = append(errorPhases, ev.Phase)
+			}
+		}
+	}()
+
+	runner := &Runner{Base: srv.URL + "/v1", Model: "Qwen3.8-27B", Out: filepath.Join(t.TempDir(), "run.json"), Events: events}
+	res, err := runner.Run(context.Background())
+	close(events)
+	<-drained
+	if err != nil {
+		t.Fatalf("run must complete when the server rejects one size: %v", err)
+	}
+	if len(errorPhases) != 0 {
+		t.Errorf("server rejection must not emit error events, got %v", errorPhases)
+	}
+	reason, ok := res.Skipped["128000"]
+	if !ok || !strings.Contains(reason, "server rejected") {
+		t.Errorf("128000 must be skipped with a server rejection reason, got %q", reason)
+	}
+	for _, k := range []string{"4000", "16000", "64000"} {
+		if _, ok := res.Prefill[k]; !ok {
+			t.Errorf("prefill %s missing", k)
+		}
 	}
 }
 

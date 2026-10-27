@@ -10,9 +10,13 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/willyhetland/llm-bencher/internal/server"
 )
 
 const resultSchema = 1
+
+const promptOvershootPercent = 5
 
 type Event struct {
 	Kind  string
@@ -72,7 +76,36 @@ type Runner struct {
 }
 
 func fitsContext(target, outTokens, contextLength int) bool {
-	return contextLength <= 0 || target+outTokens <= contextLength
+	if contextLength <= 0 {
+		return true
+	}
+	estimatedPrompt := target + target*promptOvershootPercent/100
+	return estimatedPrompt+outTokens <= contextLength
+}
+
+func isContextOverflow(err error) bool {
+	return strings.Contains(err.Error(), "exceeds the available context size")
+}
+
+func lookupContextLength(ctx context.Context, base, model string) int {
+	models, err := server.ListModels(ctx, base)
+	if err != nil {
+		return 0
+	}
+	for _, m := range models {
+		if m.ID == model {
+			return m.ContextLength
+		}
+	}
+	return 0
+}
+
+type skipError struct {
+	reason string
+}
+
+func (e skipError) Error() string {
+	return e.reason
 }
 
 func skipReason(target, outTokens, contextLength int) string {
@@ -99,6 +132,11 @@ func (r *Runner) phase(ctx context.Context, name string, fn func() (any, error))
 	r.emit(ctx, Event{Kind: EventPhaseStart, Phase: name})
 	data, err := fn()
 	if err != nil {
+		if isContextOverflow(err) {
+			reason := "skipped: server rejected the prompt: " + err.Error()
+			r.emit(ctx, Event{Kind: EventSkipped, Phase: name, Data: reason})
+			return nil, skipError{reason: reason}
+		}
 		r.emit(ctx, Event{Kind: EventError, Phase: name, Data: err.Error()})
 		return nil, err
 	}
@@ -121,6 +159,10 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 		Corpus:                 CorpusSHA256,
 	}
 
+	if r.ContextLength == 0 {
+		r.ContextLength = lookupContextLength(ctx, r.Base, r.Model)
+	}
+
 	if _, err := r.phase(ctx, PhaseWarmup, func() (any, error) {
 		return nil, Warmup(ctx, r.Base, r.Model)
 	}); err != nil {
@@ -137,6 +179,11 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 		data, err := r.phase(ctx, p.phase, func() (any, error) {
 			return MeasurePrefill(ctx, r.Base, r.Model, p.target)
 		})
+		var sk skipError
+		if errors.As(err, &sk) {
+			res.Skipped[fmt.Sprint(p.target)] = sk.reason
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -162,6 +209,11 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 		data, err := r.phase(ctx, d.phase, func() (any, error) {
 			return MeasureDecodeAt(ctx, r.Base, r.Model, d.target)
 		})
+		var sk skipError
+		if errors.As(err, &sk) {
+			res.DecodeAtContextSkipped[fmt.Sprint(d.target)] = sk.reason
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
