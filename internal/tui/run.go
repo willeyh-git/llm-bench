@@ -55,22 +55,41 @@ type runState struct {
 func newRun(opts Options, model string, contextLength int) run {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
+	phases := []phaseLine{
+		{name: bench.PhaseWarmup, label: "warm-up"},
+		{name: bench.PhaseDecodeGreedy, label: fmt.Sprintf("decode greedy (%d runs)", opts.Runs.Count("greedy"))},
+	}
+	for _, context := range []struct{ key, phase, label string }{
+		{"4k", bench.PhaseDecode4K, "4K"},
+		{"16k", bench.PhaseDecode16K, "16K"},
+		{"32k", bench.PhaseDecode32K, "32K"},
+		{"64k", bench.PhaseDecode64K, "64K"},
+		{"96k", bench.PhaseDecode96K, "96K"},
+		{"128k", bench.PhaseDecode128K, "128K"},
+	} {
+		if contextSelected(opts.Contexts, context.key) {
+			phases = append(phases, phaseLine{name: context.phase, label: fmt.Sprintf("%s prefill + decode (%d runs)", context.label, opts.Runs.Count(context.key))})
+		}
+	}
 	return run{
 		opts:          opts,
 		model:         model,
 		contextLength: contextLength,
 		spin:          s,
-		phases: []phaseLine{
-			{name: bench.PhaseWarmup, label: "warm-up"},
-			{name: bench.PhaseDecodeGreedy, label: fmt.Sprintf("decode greedy (%d runs)", opts.Runs.Count("greedy"))},
-			{name: bench.PhaseDecode4K, label: fmt.Sprintf("4K prefill + decode (%d runs)", opts.Runs.Count("4k"))},
-			{name: bench.PhaseDecode16K, label: fmt.Sprintf("16K prefill + decode (%d runs)", opts.Runs.Count("16k"))},
-			{name: bench.PhaseDecode32K, label: fmt.Sprintf("32K prefill + decode (%d runs)", opts.Runs.Count("32k"))},
-			{name: bench.PhaseDecode64K, label: fmt.Sprintf("64K prefill + decode (%d runs)", opts.Runs.Count("64k"))},
-			{name: bench.PhaseDecode96K, label: fmt.Sprintf("96K prefill + decode (%d runs)", opts.Runs.Count("96k"))},
-			{name: bench.PhaseDecode128K, label: fmt.Sprintf("128K prefill + decode (%d runs)", opts.Runs.Count("128k"))},
-		},
+		phases:        phases,
 	}
+}
+
+func contextSelected(contexts []string, key string) bool {
+	if len(contexts) == 0 {
+		return true
+	}
+	for _, context := range contexts {
+		if context == key {
+			return true
+		}
+	}
+	return false
 }
 
 func (r run) start() (run, tea.Cmd) {
@@ -78,7 +97,7 @@ func (r run) start() (run, tea.Cmd) {
 	events := make(chan bench.Event, 16)
 	done := make(chan runDoneMsg, 1)
 	r.state = &runState{events: events, done: done, cancel: cancel, running: true}
-	runner := &bench.Runner{Base: r.opts.BaseURL, Model: r.model, Out: r.opts.Out, ContextLength: r.contextLength, Runs: r.opts.Runs, Events: events}
+	runner := &bench.Runner{Base: r.opts.BaseURL, Model: r.model, Out: r.opts.Out, ContextLength: r.contextLength, Contexts: r.opts.Contexts, Runs: r.opts.Runs, Events: events}
 	go func() {
 		res, err := runner.Run(ctx)
 		done <- runDoneMsg{res: res, err: err}
