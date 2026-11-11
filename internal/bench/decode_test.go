@@ -94,7 +94,7 @@ func TestMeasureDecodeFiveRunsAgainstFakeServer(t *testing.T) {
 	srv := sseServer(t, decodeStream())
 	defer srv.Close()
 
-	res, err := MeasureDecode(t.Context(), srv.URL+"/v1", "Gemma-4-12B")
+	res, err := MeasureDecode(t.Context(), srv.URL+"/v1", "Gemma-4-12B", decodeRuns)
 	if err != nil {
 		t.Fatal(err)
 	}

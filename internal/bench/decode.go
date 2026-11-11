@@ -56,8 +56,8 @@ func decodeRun(s *StreamResult) DecodeRun {
 	return run
 }
 
-func MeasureDecode(ctx context.Context, base, model string) (DecodeResult, error) {
-	res, _, err := measureDecode(ctx, base, model, decodeRuns, decodeMessages)
+func MeasureDecode(ctx context.Context, base, model string, runs int) (DecodeResult, error) {
+	res, _, err := measureDecode(ctx, base, model, runs, decodeMessages)
 	return res, err
 }
 

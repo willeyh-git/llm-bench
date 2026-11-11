@@ -1,0 +1,356 @@
+{
+  "schema": 2,
+  "model": "KAT-Coder-V2.5 REAP",
+  "started_at": "2026-10-27T13:18:49.745303Z",
+  "prefill": {
+    "16000": {
+      "target": 16000,
+      "prompt_tokens": 16293,
+      "ttft_seconds": 8.240660333,
+      "ttft_samples": [
+        8.17956125,
+        8.245179875,
+        8.266237625,
+        8.240660333,
+        8.235090791
+      ],
+      "tps": 1977.1473815944262,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (non-Qwen model)"
+      ]
+    },
+    "32000": {
+      "target": 32000,
+      "prompt_tokens": 32696,
+      "ttft_seconds": 17.4752745,
+      "ttft_samples": [
+        17.502929292,
+        17.575779791,
+        17.435186167,
+        17.424980417,
+        17.4752745
+      ],
+      "tps": 1870.9863470241912,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (no reference count for this size)"
+      ]
+    },
+    "4000": {
+      "target": 4000,
+      "prompt_tokens": 4140,
+      "ttft_seconds": 2.288165834,
+      "ttft_samples": [
+        2.25982275,
+        2.288165834,
+        2.360688958,
+        2.284300375,
+        2.338113417
+      ],
+      "tps": 1809.3094208835216,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (non-Qwen model)"
+      ]
+    },
+    "64000": {
+      "target": 64000,
+      "prompt_tokens": 65380,
+      "ttft_seconds": 39.213631583,
+      "ttft_samples": [
+        39.105193417,
+        39.283063083,
+        39.211712917,
+        39.262475125,
+        39.213631583
+      ],
+      "tps": 1667.2773563860305,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (no reference count for this size)"
+      ]
+    },
+    "96000": {
+      "target": 96000,
+      "prompt_tokens": 98516,
+      "ttft_seconds": 67.9212955205,
+      "ttft_samples": [
+        67.842429875,
+        68.000161166
+      ],
+      "tps": 1450.4434764538012,
+      "cached_tokens": 0,
+      "flags": [
+        "prompt_tokens unchecked (no reference count for this size)"
+      ]
+    }
+  },
+  "skipped": {
+    "128000": "skipped: server rejected the prompt: decode run 1: HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (131078 tokens) exceeds the available context size (128000 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":131078,\"n_ctx\":128000}}"
+  },
+  "decode": {
+    "runs": [
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "ttft_seconds": 0.34723425,
+        "prompt_tokens": 90,
+        "tps_window": 92.87478943868942,
+        "tps_end_to_end": 87.08116297188987
+      },
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "ttft_seconds": 0.279487292,
+        "prompt_tokens": 92,
+        "tps_window": 92.47455867486347,
+        "tps_end_to_end": 87.82515987165324
+      },
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "ttft_seconds": 0.332442541,
+        "prompt_tokens": 90,
+        "tps_window": 92.05786905766514,
+        "tps_end_to_end": 87.56672402939985
+      },
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "ttft_seconds": 0.266332041,
+        "prompt_tokens": 94,
+        "tps_window": 91.67322040106325,
+        "tps_end_to_end": 87.38262448668053
+      },
+      {
+        "tokens": 512,
+        "finish_reason": "length",
+        "ttft_seconds": 0.322460917,
+        "prompt_tokens": 91,
+        "tps_window": 93.0146759777641,
+        "tps_end_to_end": 88.42281280018847
+      }
+    ],
+    "tps_median": 92.47455867486347,
+    "tps_min": 91.67322040106325,
+    "tps_max": 93.0146759777641
+  },
+  "decode_at_context": {
+    "16000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 8.17956125,
+          "prompt_tokens": 16293,
+          "tps_window": 86.84547264166805,
+          "tps_end_to_end": 36.29617988039669
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 8.245179875,
+          "prompt_tokens": 16296,
+          "tps_window": 87.20641552598669,
+          "tps_end_to_end": 36.197042284833906
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 8.266237625,
+          "prompt_tokens": 16294,
+          "tps_window": 86.80318712585591,
+          "tps_end_to_end": 36.08193250099576
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 8.240660333,
+          "prompt_tokens": 16295,
+          "tps_window": 87.41934640358416,
+          "tps_end_to_end": 36.2239522462975
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 8.235090791,
+          "prompt_tokens": 16293,
+          "tps_window": 87.42958575411589,
+          "tps_end_to_end": 36.251329152589086
+        }
+      ],
+      "tps_median": 87.20641552598669,
+      "tps_min": 86.80318712585591,
+      "tps_max": 87.42958575411589
+    },
+    "32000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 17.502929292,
+          "prompt_tokens": 32696,
+          "tps_window": 83.2785080752363,
+          "tps_end_to_end": 21.76511227134919
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 17.575779791,
+          "prompt_tokens": 32698,
+          "tps_window": 83.08083769501019,
+          "tps_end_to_end": 21.66364679012757
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 17.435186167,
+          "prompt_tokens": 32698,
+          "tps_window": 83.95846851095625,
+          "tps_end_to_end": 21.726492540946467
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 17.424980417,
+          "prompt_tokens": 32697,
+          "tps_window": 83.69573905113516,
+          "tps_end_to_end": 21.70396044938952
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 17.4752745,
+          "prompt_tokens": 32698,
+          "tps_window": 83.7830802254329,
+          "tps_end_to_end": 21.68895534886592
+        }
+      ],
+      "tps_median": 83.69573905113516,
+      "tps_min": 83.08083769501019,
+      "tps_max": 83.95846851095625
+    },
+    "4000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 2.25982275,
+          "prompt_tokens": 4140,
+          "tps_window": 91.59329972627175,
+          "tps_end_to_end": 65.1019938962465
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 2.288165834,
+          "prompt_tokens": 4138,
+          "tps_window": 91.54498119647629,
+          "tps_end_to_end": 64.81115425057097
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 2.360688958,
+          "prompt_tokens": 4142,
+          "tps_window": 90.55188725300937,
+          "tps_end_to_end": 64.34791022246507
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 2.284300375,
+          "prompt_tokens": 4141,
+          "tps_window": 90.36188438295206,
+          "tps_end_to_end": 64.2318615118972
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 2.338113417,
+          "prompt_tokens": 4142,
+          "tps_window": 90.61732777713156,
+          "tps_end_to_end": 64.19382968846223
+        }
+      ],
+      "tps_median": 90.61732777713156,
+      "tps_min": 90.36188438295206,
+      "tps_max": 91.59329972627175
+    },
+    "64000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 39.105193417,
+          "prompt_tokens": 65380,
+          "tps_window": 76.9271921361699,
+          "tps_end_to_end": 11.166733922240633
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 39.283063083,
+          "prompt_tokens": 65382,
+          "tps_window": 76.22380885987288,
+          "tps_end_to_end": 11.131521552923417
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 39.211712917,
+          "prompt_tokens": 65380,
+          "tps_window": 77.04880732273598,
+          "tps_end_to_end": 11.14219597624897
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 39.262475125,
+          "prompt_tokens": 65380,
+          "tps_window": 76.52059403921479,
+          "tps_end_to_end": 11.12775850035467
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 39.213631583,
+          "prompt_tokens": 65381,
+          "tps_window": 76.18520605095516,
+          "tps_end_to_end": 11.129879118921087
+        }
+      ],
+      "tps_median": 76.52059403921479,
+      "tps_min": 76.18520605095516,
+      "tps_max": 77.04880732273598
+    },
+    "96000": {
+      "runs": [
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 67.842429875,
+          "prompt_tokens": 98516,
+          "tps_window": 68.93741988087095,
+          "tps_end_to_end": 6.794639434372329
+        },
+        {
+          "tokens": 512,
+          "finish_reason": "length",
+          "ttft_seconds": 68.000161166,
+          "prompt_tokens": 98516,
+          "tps_window": 68.70716209894643,
+          "tps_end_to_end": 6.772936731689637
+        }
+      ],
+      "tps_median": 68.82229098990868,
+      "tps_min": 68.70716209894643,
+      "tps_max": 68.93741988087095
+    }
+  },
+  "decode_at_context_skipped": {
+    "128000": "skipped: server rejected the prompt: decode run 1: HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (131078 tokens) exceeds the available context size (128000 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":131078,\"n_ctx\":128000}}"
+  },
+  "corpus": "58a7756fd94fc48a7b7306d330b2c44663bdf22faa943f82430966c2878081b2"
+}

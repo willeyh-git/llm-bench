@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/willyhetland/llm-bencher/internal/config"
 	"github.com/willyhetland/llm-bencher/internal/server"
 )
 
@@ -44,19 +45,17 @@ const (
 	PhaseDecode128K   = "decode_128k"
 )
 
-const decodeRunsLongContext = 2
-
 var decodeSizes = []struct {
 	phase  string
+	key    string
 	target int
-	runs   int
 }{
-	{PhaseDecode4K, 4000, decodeRuns},
-	{PhaseDecode16K, 16000, decodeRuns},
-	{PhaseDecode32K, 32000, decodeRuns},
-	{PhaseDecode64K, 64000, decodeRuns},
-	{PhaseDecode96K, 96000, decodeRunsLongContext},
-	{PhaseDecode128K, 128000, decodeRunsLongContext},
+	{PhaseDecode4K, "4k", 4000},
+	{PhaseDecode16K, "16k", 16000},
+	{PhaseDecode32K, "32k", 32000},
+	{PhaseDecode64K, "64k", 64000},
+	{PhaseDecode96K, "96k", 96000},
+	{PhaseDecode128K, "128k", 128000},
 }
 
 type Result struct {
@@ -76,6 +75,7 @@ type Runner struct {
 	Base, Model   string
 	Out           string
 	ContextLength int
+	Runs          config.Runs
 	Events        chan<- Event
 }
 
@@ -174,7 +174,7 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 	}
 
 	data, err := r.phase(ctx, PhaseDecodeGreedy, func() (any, error) {
-		return MeasureDecode(ctx, r.Base, r.Model)
+		return MeasureDecode(ctx, r.Base, r.Model, r.Runs.Count("greedy"))
 	})
 	if err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 			continue
 		}
 		data, err := r.phase(ctx, d.phase, func() (any, error) {
-			return MeasureDecodeAt(ctx, r.Base, r.Model, d.target, d.runs)
+			return MeasureDecodeAt(ctx, r.Base, r.Model, d.target, r.Runs.Count(d.key))
 		})
 		var sk skipError
 		if errors.As(err, &sk) {

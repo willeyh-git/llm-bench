@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/willyhetland/llm-bencher/internal/config"
 )
 
 func fakeServer(t *testing.T) *httptest.Server {
@@ -123,16 +125,16 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 			t.Errorf("decode at %d missing", d.target)
 			continue
 		}
-		if len(dc.Runs) != d.runs {
-			t.Errorf("decode at %d runs = %d, want %d", d.target, len(dc.Runs), d.runs)
+		if want := config.DefaultRuns.Count(d.key); len(dc.Runs) != want {
+			t.Errorf("decode at %d runs = %d, want %d", d.target, len(dc.Runs), want)
 		}
 		pr, ok := res.Prefill[fmt.Sprint(d.target)]
 		if !ok {
 			t.Errorf("prefill at %d missing: it must come from the decode runs", d.target)
 			continue
 		}
-		if len(pr.TTFTSamples) != d.runs {
-			t.Errorf("prefill at %d ttft samples = %d, want %d", d.target, len(pr.TTFTSamples), d.runs)
+		if want := config.DefaultRuns.Count(d.key); len(pr.TTFTSamples) != want {
+			t.Errorf("prefill at %d ttft samples = %d, want %d", d.target, len(pr.TTFTSamples), want)
 		}
 		if pr.TTFTSeconds <= 0 || pr.PromptTokens <= 0 {
 			t.Errorf("prefill at %d has no timing: %+v", d.target, pr)
@@ -224,6 +226,28 @@ func TestRunnerSkipsPrefillRejectedByServer(t *testing.T) {
 	}
 	if _, ok := res.Prefill["128000"]; ok {
 		t.Error("prefill 128000 must not be recorded when the server rejects it")
+	}
+}
+
+func TestRunnerUsesConfiguredRunCounts(t *testing.T) {
+	srv := fakeServer(t)
+	defer srv.Close()
+
+	out := filepath.Join(t.TempDir(), "run.json")
+	runs := config.Runs{"greedy": 3, "4k": 1}
+	runner := &Runner{Base: srv.URL + "/v1", Model: "Gemma-4-12B", Out: out, ContextLength: 262144, Runs: runs}
+	res, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Decode.Runs) != 3 {
+		t.Errorf("greedy decode runs = %d, want 3", len(res.Decode.Runs))
+	}
+	if dc := res.DecodeAtContext["4000"]; len(dc.Runs) != 1 {
+		t.Errorf("decode at 4000 runs = %d, want 1", len(dc.Runs))
+	}
+	if dc := res.DecodeAtContext["16000"]; len(dc.Runs) != config.DefaultRuns.Count("16k") {
+		t.Errorf("decode at 16000 runs = %d, want default %d", len(dc.Runs), config.DefaultRuns.Count("16k"))
 	}
 }
 

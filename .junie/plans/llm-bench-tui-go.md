@@ -296,3 +296,13 @@ Prefill TTFT and prefill tok/s at 4K to 128K come from the decode-at-context req
 - In `internal/tui/summary.go`, the prefill rows keep reading `Result.Prefill` by size, so no key changes are needed there.
 - Update `internal/bench/runner_test.go`: the phase order becomes warm-up, decode greedy, then decode 4K to 128K. Add a check that each size's `TTFTSamples` has one entry per run, and that prefill keys come from the decode runs.
 - Confirm the decode prompt's `prompt_tokens` at 4K and 16K still falls within ±1% of `referencePromptTokens`, because the decode prompt differs from the old prefill prompt. If it does not, re-measure the references before keeping the check.
+
+### ✓ Step 10: Sidecar config for API URL and runs per context size
+The API base URL and the run count per size are read from a JSON sidecar file, so they no longer live in code. Only OpenAI-compatible APIs are supported.
+
+- Add a sidecar file `llm-bencher.json` in the working directory with `base_url` and a `runs` map. Keys are `greedy`, `4k`, `16k`, `32k`, `64k`, `96k` and `128k`. Defaults match the current values: 5 runs for every size except 96k and 128k, which use 2.
+- Load the sidecar at start. A missing key falls back to its default. The default base URL is removed from code.
+- If no base URL is saved and `--base-url` is not given, the TUI shows a text prompt for the API base URL before the picker, then saves it to the sidecar.
+- Keep `--base-url` as a per-session override that is not written to the sidecar.
+- Use the sidecar run counts in the runner for the base decode and for each context decode size, and show the counts on the run screen labels.
+- Add tests for the sidecar load, defaults, save, and the URL prompt transitions.

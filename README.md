@@ -38,9 +38,22 @@ go run ./cmd/llm-bencher
 llm-bencher [flags]
 ```
 
+### Sidecar config
+
+Settings live in `llm-bencher.json` in the working directory. If no `base_url` is saved, the app asks for one at startup and saves it there. The run counts default to the values below when a key is missing.
+
+```json
+{
+  "base_url": "http://0.0.0.0:8080/v1",
+  "runs": {
+    "greedy": 5, "4k": 5, "16k": 5, "32k": 5, "64k": 5, "96k": 2, "128k": 2
+  }
+}
+```
+
 | Flag | Default | Description |
 | --- | --- | --- |
-| `--base-url` | `http://0.0.0.0:8080/v1` | OpenAI-compatible base URL. Models are read from `{base-url}/models`. |
+| `--base-url` | (from `llm-bencher.json`) | OpenAI-compatible base URL for this session. Models are read from `{base-url}/models`. It is not saved to the sidecar. |
 | `--model` | (empty) | Model id to benchmark. When set, the picker is skipped. |
 | `--out` | (empty) | Path of the result JSON file. Default is `results/<UTC timestamp>-<model slug>.json`. |
 
@@ -48,7 +61,7 @@ Examples:
 
 ```sh
 # Pick a model from the server's list
-llm-bencher --base-url http://localhost:8080/v1
+llm-bencher --base-url http://0.0.0.0:8080/v1
 
 # Benchmark one model directly and write to a chosen file
 llm-bencher --model "Qwen3.8-27B" --out results/qwen-run.json

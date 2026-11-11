@@ -62,13 +62,13 @@ func newRun(opts Options, model string, contextLength int) run {
 		spin:          s,
 		phases: []phaseLine{
 			{name: bench.PhaseWarmup, label: "warm-up"},
-			{name: bench.PhaseDecodeGreedy, label: "decode greedy (5 runs)"},
-			{name: bench.PhaseDecode4K, label: "4K prefill + decode (5 runs)"},
-			{name: bench.PhaseDecode16K, label: "16K prefill + decode (5 runs)"},
-			{name: bench.PhaseDecode32K, label: "32K prefill + decode (5 runs)"},
-			{name: bench.PhaseDecode64K, label: "64K prefill + decode (5 runs)"},
-			{name: bench.PhaseDecode96K, label: "96K prefill + decode (2 runs)"},
-			{name: bench.PhaseDecode128K, label: "128K prefill + decode (2 runs)"},
+			{name: bench.PhaseDecodeGreedy, label: fmt.Sprintf("decode greedy (%d runs)", opts.Runs.Count("greedy"))},
+			{name: bench.PhaseDecode4K, label: fmt.Sprintf("4K prefill + decode (%d runs)", opts.Runs.Count("4k"))},
+			{name: bench.PhaseDecode16K, label: fmt.Sprintf("16K prefill + decode (%d runs)", opts.Runs.Count("16k"))},
+			{name: bench.PhaseDecode32K, label: fmt.Sprintf("32K prefill + decode (%d runs)", opts.Runs.Count("32k"))},
+			{name: bench.PhaseDecode64K, label: fmt.Sprintf("64K prefill + decode (%d runs)", opts.Runs.Count("64k"))},
+			{name: bench.PhaseDecode96K, label: fmt.Sprintf("96K prefill + decode (%d runs)", opts.Runs.Count("96k"))},
+			{name: bench.PhaseDecode128K, label: fmt.Sprintf("128K prefill + decode (%d runs)", opts.Runs.Count("128k"))},
 		},
 	}
 }
@@ -78,7 +78,7 @@ func (r run) start() (run, tea.Cmd) {
 	events := make(chan bench.Event, 16)
 	done := make(chan runDoneMsg, 1)
 	r.state = &runState{events: events, done: done, cancel: cancel, running: true}
-	runner := &bench.Runner{Base: r.opts.BaseURL, Model: r.model, Out: r.opts.Out, ContextLength: r.contextLength, Events: events}
+	runner := &bench.Runner{Base: r.opts.BaseURL, Model: r.model, Out: r.opts.Out, ContextLength: r.contextLength, Runs: r.opts.Runs, Events: events}
 	go func() {
 		res, err := runner.Run(ctx)
 		done <- runDoneMsg{res: res, err: err}
