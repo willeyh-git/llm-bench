@@ -99,7 +99,7 @@ A run executes these phases in order. Each phase is a line on the run screen wit
 
 - **Prefill TTFT** is the time from sending the request to the first content-bearing stream event.
 - **Prefill tok/s** is `usage.prompt_tokens` divided by TTFT.
-- **Decode tok/s** (the headline figure) is measured on the middle of the stream. The first 16 and last 4 tokens are dropped, and the rate is computed over the rest.
+- **Decode tok/s** (the headline figure) is measured during active generation, as `(tokens - 1) / (total time - TTFT)`.
 - **End-to-end decode tok/s** is reported alongside, as `(tokens - 1) / total time`.
 
 Requests use these settings:
@@ -164,7 +164,7 @@ internal/bench/        measurement code
   prompts.go           prefill and decode message builders, nonces
   stream.go            streaming chat client (TTFT, usage, timestamps)
   prefill.go           warm-up and prefill measurement and validation
-  decode.go            greedy decode measurement and window rate
+  decode.go            greedy decode measurement and decode rate
   runner.go            phase orchestration, skip rules, events, JSON output
   result.go            result types and statistics
   corpus/              corpus file and NOTICE.md
