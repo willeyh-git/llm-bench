@@ -14,22 +14,41 @@ func fixtureEvents(n int, step time.Duration) []time.Duration {
 	return ev
 }
 
-func TestWindowRateDropsFirst16AndLast4(t *testing.T) {
-	ev := fixtureEvents(512, 10*time.Millisecond)
-	got := windowRate(ev)
-	window := ev[16 : 512-4]
-	want := float64(len(window)-1) / (window[len(window)-1] - window[0]).Seconds()
-	if math.Abs(got-want) > 1e-9 {
-		t.Fatalf("windowRate = %v, want %v", got, want)
+func TestDecodeRate(t *testing.T) {
+	s := &StreamResult{
+		TTFT:  1 * time.Second,
+		Total: 6 * time.Second,
 	}
-	if math.Abs(got-100) > 1e-6 {
-		t.Fatalf("uniform 100 tok/s stream gave %v", got)
+	got := decodeRate(512, s)
+	want := 511.0 / 5.0
+	if math.Abs(got-want) > 1e-9 {
+		t.Fatalf("decodeRate = %v, want %v", got, want)
 	}
 }
 
-func TestWindowRateTooShort(t *testing.T) {
-	if got := windowRate(fixtureEvents(10, time.Millisecond)); got != 0 {
+func TestDecodeRateSpeculative(t *testing.T) {
+	// 512 tokens delivered in 100 multi-token chunks instead of 512 chunks
+	s := &StreamResult{
+		TTFT:    500 * time.Millisecond,
+		Total:   5500 * time.Millisecond,
+		EventAt: fixtureEvents(100, 50*time.Millisecond),
+	}
+	got := decodeRate(512, s)
+	want := 511.0 / 5.0
+	if math.Abs(got-want) > 1e-9 {
+		t.Fatalf("decodeRate with multi-token chunks = %v, want %v", got, want)
+	}
+}
+
+func TestDecodeRateTooShort(t *testing.T) {
+	if got := decodeRate(1, &StreamResult{TTFT: time.Millisecond, Total: time.Second}); got != 0 {
 		t.Fatalf("short stream rate = %v, want 0", got)
+	}
+	if got := decodeRate(512, &StreamResult{TTFT: 2 * time.Second, Total: 1 * time.Second}); got != 0 {
+		t.Fatalf("negative duration rate = %v, want 0", got)
+	}
+	if got := decodeRate(512, nil); got != 0 {
+		t.Fatalf("nil stream rate = %v, want 0", got)
 	}
 }
 

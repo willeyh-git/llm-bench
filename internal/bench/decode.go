@@ -3,27 +3,26 @@ package bench
 import (
 	"context"
 	"fmt"
-	"time"
 )
 
 const (
 	decodeMaxTokens = 512
 	decodeRuns      = 5
-	decodeDropFirst = 16
-	decodeDropLast  = 4
 )
 
-func windowRate(eventAt []time.Duration) float64 {
-	n := len(eventAt)
-	if n-decodeDropFirst-decodeDropLast < 2 {
+func decodeRate(tokens int, s *StreamResult) float64 {
+	if tokens < 2 || s == nil {
 		return 0
 	}
-	window := eventAt[decodeDropFirst : n-decodeDropLast]
-	span := window[len(window)-1] - window[0]
+	ttft := s.TTFT
+	if ttft <= 0 && len(s.EventAt) > 0 {
+		ttft = s.EventAt[0]
+	}
+	span := s.Total - ttft
 	if span <= 0 {
 		return 0
 	}
-	return float64(len(window)-1) / span.Seconds()
+	return float64(tokens-1) / span.Seconds()
 }
 
 func endToEndRate(tokens int, s *StreamResult) float64 {
@@ -39,13 +38,14 @@ type ContextDecode struct {
 }
 
 func decodeRun(s *StreamResult) DecodeRun {
-	run := DecodeRun{FinishReason: s.Finish, TTFTSeconds: s.TTFT.Seconds(), TPSWindow: windowRate(s.EventAt)}
+	run := DecodeRun{FinishReason: s.Finish, TTFTSeconds: s.TTFT.Seconds()}
 	if s.Usage != nil {
 		run.Tokens = s.Usage.CompletionTokens
 		run.PromptTokens = s.Usage.PromptTokens
 	} else {
 		run.Tokens = len(s.EventAt)
 	}
+	run.TPSWindow = decodeRate(run.Tokens, s)
 	run.TPSEndToEnd = endToEndRate(run.Tokens, s)
 	if s.Finish != "length" {
 		run.Flags = append(run.Flags, fmt.Sprintf("finish_reason %q, expected \"length\"", s.Finish))
