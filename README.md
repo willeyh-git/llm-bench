@@ -40,7 +40,7 @@ llm-bencher [flags]
 
 | Flag | Default | Description |
 | --- | --- | --- |
-| `--base-url` | `http://gaming:8080/v1` | OpenAI-compatible base URL. Models are read from `{base-url}/models`. |
+| `--base-url` | `http://0.0.0.0:8080/v1` | OpenAI-compatible base URL. Models are read from `{base-url}/models`. |
 | `--model` | (empty) | Model id to benchmark. When set, the picker is skipped. |
 | `--out` | (empty) | Path of the result JSON file. Default is `results/<UTC timestamp>-<model slug>.json`. |
 
