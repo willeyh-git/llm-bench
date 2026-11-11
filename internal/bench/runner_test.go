@@ -251,6 +251,24 @@ func TestRunnerUsesConfiguredRunCounts(t *testing.T) {
 	}
 }
 
+func TestRunnerRunsOnlySelectedContexts(t *testing.T) {
+	srv := fakeServer(t)
+	defer srv.Close()
+	runner := &Runner{Base: srv.URL + "/v1", Model: "Gemma-4-12B", Out: filepath.Join(t.TempDir(), "selected.json"), ContextLength: 262144, Contexts: []string{"4k", "16k"}, Runs: config.Runs{"greedy": 1, "4k": 1, "16k": 1}}
+	res, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Prefill) != 2 || len(res.DecodeAtContext) != 2 {
+		t.Fatalf("selected tiers recorded: prefill=%v decode=%v", res.Prefill, res.DecodeAtContext)
+	}
+	for _, key := range []string{"32000", "64000", "96000", "126000"} {
+		if _, ok := res.Prefill[key]; ok {
+			t.Errorf("unselected prefill tier %s was run", key)
+		}
+	}
+}
+
 func TestRunnerSkipsSizesAboveContextLength(t *testing.T) {
 	srv := fakeServer(t)
 	defer srv.Close()

@@ -76,6 +76,7 @@ type Runner struct {
 	Base, Model   string
 	Out           string
 	ContextLength int
+	Contexts      []string
 	Runs          config.Runs
 	Events        chan<- Event
 }
@@ -183,6 +184,9 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 	res.Decode = data.(DecodeResult)
 
 	for _, d := range decodeSizes {
+		if !contextSelected(r.Contexts, d.key) {
+			continue
+		}
 		key := fmt.Sprint(d.target)
 		if !fitsContext(d.target, decodeMaxTokens, r.ContextLength) {
 			reason := skipReason(d.target, decodeMaxTokens, r.ContextLength)
@@ -218,6 +222,18 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 	res.Path = path
 	r.emit(ctx, Event{Kind: EventDone, Data: res})
 	return res, nil
+}
+
+func contextSelected(contexts []string, key string) bool {
+	if len(contexts) == 0 {
+		return true
+	}
+	for _, context := range contexts {
+		if context == key {
+			return true
+		}
+	}
+	return false
 }
 
 func DefaultOutPath(model string, t time.Time) string {

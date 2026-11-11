@@ -9,6 +9,7 @@ type Options struct {
 	BaseURL    string
 	Out        string
 	Model      string
+	Contexts   []string
 	Runs       config.Runs
 	ConfigPath string
 }
