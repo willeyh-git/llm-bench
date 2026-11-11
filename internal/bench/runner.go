@@ -18,6 +18,7 @@ import (
 const resultSchema = 2
 
 const promptOvershootPercent = 5
+const prompt128KTarget = 126000
 
 type Event struct {
 	Kind  string
@@ -55,7 +56,7 @@ var decodeSizes = []struct {
 	{PhaseDecode32K, "32k", 32000},
 	{PhaseDecode64K, "64k", 64000},
 	{PhaseDecode96K, "96k", 96000},
-	{PhaseDecode128K, "128k", 128000},
+	{PhaseDecode128K, "128k", prompt128KTarget},
 }
 
 type Result struct {

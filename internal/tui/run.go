@@ -104,6 +104,13 @@ func (r run) update(msg tea.Msg) (run, tea.Cmd) {
 		r.spin, cmd = r.spin.Update(msg)
 		return r, cmd
 	case runEventMsg:
+		if msg.ev.Kind == bench.EventDone {
+			if result, ok := msg.ev.Data.(*bench.Result); ok {
+				r.state.running = false
+				r.state.result = result
+				return r, nil
+			}
+		}
 		r.apply(msg.ev)
 		return r, waitEvent(r.state.events, r.state.done)
 	case runDoneMsg:
