@@ -23,7 +23,7 @@ func summaryView(res *bench.Result) string {
 		{"32000", "prefill 32K"},
 		{"64000", "prefill 64K"},
 		{"96000", "prefill 96K"},
-		{"128000", "prefill 128K"},
+		{"126000", "prefill 128K"},
 	} {
 		if reason, ok := res.Skipped[k.key]; ok {
 			b.WriteString(fmt.Sprintf("%-12s %s\n", k.label, subtleStyle.Render(reason)))
@@ -49,7 +49,7 @@ func summaryView(res *bench.Result) string {
 		{"32000", "decode 32K"},
 		{"64000", "decode 64K"},
 		{"96000", "decode 96K"},
-		{"128000", "decode 128K"},
+		{"126000", "decode 128K"},
 	} {
 		if reason, ok := res.DecodeAtContextSkipped[k.key]; ok {
 			b.WriteString(fmt.Sprintf("%-12s %s\n", k.label, subtleStyle.Render(reason)))

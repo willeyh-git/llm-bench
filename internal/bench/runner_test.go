@@ -111,7 +111,7 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 		t.Errorf("corpus = %v", decoded["corpus"])
 	}
 	prefill, _ := decoded["prefill"].(map[string]any)
-	for _, k := range []string{"4000", "16000", "32000", "64000", "96000", "128000"} {
+	for _, k := range []string{"4000", "16000", "32000", "64000", "96000", "126000"} {
 		if _, ok := prefill[k]; !ok {
 			t.Errorf("prefill missing %s", k)
 		}
@@ -150,13 +150,13 @@ func TestFitsContextAllowsForPromptOvershoot(t *testing.T) {
 		target, out, ctxLen int
 		want                bool
 	}{
-		{128000, 256, 128000, false},
-		{128000, 256, 102400, false},
-		{128000, 256, 143360, true},
+		{126000, 256, 128000, false},
+		{126000, 256, 102400, false},
+		{126000, 256, 143360, true},
 		{64000, 512, 102400, true},
 		{16000, 256, 32768, true},
 		{64000, 512, 32768, false},
-		{128000, 256, 0, true},
+		{126000, 256, 0, true},
 	}
 	for _, c := range cases {
 		if got := fitsContext(c.target, c.out, c.ctxLen); got != c.want {
@@ -215,17 +215,17 @@ func TestRunnerSkipsPrefillRejectedByServer(t *testing.T) {
 	if len(errorPhases) != 0 {
 		t.Errorf("server rejection must not emit error events, got %v", errorPhases)
 	}
-	reason, ok := res.Skipped["128000"]
+	reason, ok := res.Skipped["126000"]
 	if !ok || !strings.Contains(reason, "server rejected") {
-		t.Errorf("128000 must be skipped with a server rejection reason, got %q", reason)
+		t.Errorf("126000 must be skipped with a server rejection reason, got %q", reason)
 	}
 	for _, k := range []string{"4000", "16000", "64000"} {
 		if _, ok := res.Prefill[k]; !ok {
 			t.Errorf("prefill %s missing", k)
 		}
 	}
-	if _, ok := res.Prefill["128000"]; ok {
-		t.Error("prefill 128000 must not be recorded when the server rejects it")
+	if _, ok := res.Prefill["126000"]; ok {
+		t.Error("prefill 126000 must not be recorded when the server rejects it")
 	}
 }
 
@@ -279,7 +279,7 @@ func TestRunnerSkipsSizesAboveContextLength(t *testing.T) {
 	if _, ok := res.Prefill["16000"]; !ok {
 		t.Error("16K prefill fits 32768 and must run")
 	}
-	for _, k := range []string{"32000", "64000", "96000", "128000"} {
+	for _, k := range []string{"32000", "64000", "96000", "126000"} {
 		if _, ok := res.Prefill[k]; ok {
 			t.Errorf("prefill %s must be skipped above context_length", k)
 		}
@@ -292,7 +292,7 @@ func TestRunnerSkipsSizesAboveContextLength(t *testing.T) {
 			t.Errorf("decode at %s fits 32768 and must run", k)
 		}
 	}
-	for _, k := range []string{"32000", "64000", "96000", "128000"} {
+	for _, k := range []string{"32000", "64000", "96000", "126000"} {
 		if _, ok := res.DecodeAtContext[k]; ok {
 			t.Errorf("decode at %s must be skipped above context_length", k)
 		}

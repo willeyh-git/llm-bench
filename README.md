@@ -7,7 +7,7 @@ The benchmark reproduces the prefill and greedy-decode measurements from the `be
 ## Features
 
 - Model picker that lists every model id the server reports, with its `loaded` or `unloaded` status.
-- Cold prefill at 4K, 16K, 32K, 64K, 96K and 128K prompt tokens, taken from the first request of each context decode run at that size.
+- Cold prefill at 4K, 16K, 32K, 64K, 96K and approximately 129K prompt tokens (the 128K tier), taken from the first request of each context decode run at that size.
 - Greedy decode over 512 generated tokens, plus greedy decode after a corpus-sized prompt at 4K, 16K, 32K, 64K, 96K and 128K.
 - Automatic skipping of any size that does not fit the model's `context_length`, with the reason recorded.
 - A live run screen with one line per phase, and a summary card at the end.
