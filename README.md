@@ -55,6 +55,7 @@ Settings live in `llm-bencher.json` in the working directory. If no `base_url` i
 | --- | --- | --- |
 | `--base-url` | (from `llm-bencher.json`) | OpenAI-compatible base URL for this session. Models are read from `{base-url}/models`. It is not saved to the sidecar. |
 | `--model` | (empty) | Model id to benchmark. When set, the picker is skipped. |
+| `--tag` | (empty) | Optional label associated with the run; saved in the result JSON and shown beside the model name. |
 | `--out` | (empty) | Path of the result JSON file. Default is `results/<UTC timestamp>-<model slug>.json`. |
 | `--contexts` | all | Comma-separated context tiers to run: `4,16,32,64,96,128`. Warm-up and the short-prompt greedy decode always run. |
 
@@ -66,6 +67,9 @@ llm-bencher --base-url http://0.0.0.0:8080/v1
 
 # Benchmark one model directly and write to a chosen file
 llm-bencher --model "Qwen3.8-27B" --out results/qwen-run.json
+
+# Add an identifying tag to the benchmark result
+llm-bencher --model "Qwen3.8-27B" --tag "speculative decoding"
 
 # Run only the 4K and 16K context tiers
 llm-bencher --contexts 4,16

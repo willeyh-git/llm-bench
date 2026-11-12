@@ -15,7 +15,11 @@ var cardStyle = lipgloss.NewStyle().
 
 func summaryView(res *bench.Result) string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Summary: "+res.Model) + "\n\n")
+	title := "Summary: " + res.Model
+	if res.Tag != "" {
+		title += " · " + res.Tag
+	}
+	b.WriteString(titleStyle.Render(title) + "\n\n")
 
 	for _, k := range []struct{ key, label string }{
 		{"4000", "prefill 4K"},

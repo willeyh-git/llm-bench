@@ -97,7 +97,7 @@ func (r run) start() (run, tea.Cmd) {
 	events := make(chan bench.Event, 16)
 	done := make(chan runDoneMsg, 1)
 	r.state = &runState{events: events, done: done, cancel: cancel, running: true}
-	runner := &bench.Runner{Base: r.opts.BaseURL, Model: r.model, Out: r.opts.Out, ContextLength: r.contextLength, Contexts: r.opts.Contexts, Runs: r.opts.Runs, Events: events}
+	runner := &bench.Runner{Base: r.opts.BaseURL, Model: r.model, Tag: r.opts.Tag, Out: r.opts.Out, ContextLength: r.contextLength, Contexts: r.opts.Contexts, Runs: r.opts.Runs, Events: events}
 	go func() {
 		res, err := runner.Run(ctx)
 		done <- runDoneMsg{res: res, err: err}

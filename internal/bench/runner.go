@@ -62,6 +62,7 @@ var decodeSizes = []struct {
 type Result struct {
 	Schema                 int                      `json:"schema"`
 	Model                  string                   `json:"model"`
+	Tag                    string                   `json:"tag,omitempty"`
 	StartedAt              time.Time                `json:"started_at"`
 	Prefill                map[string]PrefillResult `json:"prefill"`
 	Skipped                map[string]string        `json:"skipped,omitempty"`
@@ -74,6 +75,7 @@ type Result struct {
 
 type Runner struct {
 	Base, Model   string
+	Tag           string
 	Out           string
 	ContextLength int
 	Contexts      []string
@@ -157,6 +159,7 @@ func (r *Runner) Run(ctx context.Context) (*Result, error) {
 	res := &Result{
 		Schema:                 resultSchema,
 		Model:                  r.Model,
+		Tag:                    r.Tag,
 		StartedAt:              time.Now().UTC(),
 		Prefill:                map[string]PrefillResult{},
 		Skipped:                map[string]string{},
