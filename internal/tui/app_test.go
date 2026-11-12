@@ -9,7 +9,7 @@ import (
 )
 
 func TestCompletedRunShowsSummaryUntilEnter(t *testing.T) {
-	result := &bench.Result{Model: "test-model", Path: "results/test.json"}
+	result := &bench.Result{Model: "test-model", Tag: "nightly", Path: "results/test.json"}
 	m := Model{
 		screen: screenRun,
 		run:    run{state: &runState{running: true}},
@@ -20,7 +20,7 @@ func TestCompletedRunShowsSummaryUntilEnter(t *testing.T) {
 	if m.screen != screenSummary {
 		t.Fatalf("screen after successful run = %v, want summary", m.screen)
 	}
-	if got := m.View(); !strings.Contains(got, "Summary: test-model") {
+	if got := m.View(); !strings.Contains(got, "Summary: test-model · nightly") {
 		t.Fatalf("summary view does not show the completed result: %s", got)
 	}
 

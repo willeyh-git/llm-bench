@@ -67,7 +67,7 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 
 	out := filepath.Join(t.TempDir(), "run.json")
 	events := make(chan Event, 4)
-	runner := &Runner{Base: srv.URL + "/v1", Model: "Gemma-4-12B", Out: out, Events: events}
+	runner := &Runner{Base: srv.URL + "/v1", Model: "Gemma-4-12B", Tag: "nightly", Out: out, Events: events}
 
 	var starts []string
 	drained := make(chan struct{})
@@ -99,13 +99,16 @@ func TestRunnerEndToEndEventOrderAndSchema(t *testing.T) {
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"schema", "model", "started_at", "prefill", "decode", "decode_at_context", "corpus"} {
+	for _, key := range []string{"schema", "model", "tag", "started_at", "prefill", "decode", "decode_at_context", "corpus"} {
 		if _, ok := decoded[key]; !ok {
 			t.Errorf("result JSON missing %q", key)
 		}
 	}
 	if decoded["schema"] != float64(resultSchema) {
 		t.Errorf("schema = %v", decoded["schema"])
+	}
+	if decoded["tag"] != "nightly" {
+		t.Errorf("tag = %v, want nightly", decoded["tag"])
 	}
 	if decoded["corpus"] != CorpusSHA256 {
 		t.Errorf("corpus = %v", decoded["corpus"])

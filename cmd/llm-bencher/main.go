@@ -18,6 +18,7 @@ func main() {
 	flag.StringVar(&opts.BaseURL, "base-url", "", "OpenAI-compatible base URL for this session (not saved to "+config.FileName+")")
 	flag.StringVar(&opts.Out, "out", "", "result JSON path (default results/<UTC timestamp>-<model slug>.json)")
 	flag.StringVar(&opts.Model, "model", "", "model id to benchmark, skips the picker")
+	flag.StringVar(&opts.Tag, "tag", "", "optional tag to associate with the benchmark result")
 	flag.StringVar(&contexts, "contexts", "", "context tiers to run, comma-separated: 4,16,32,64,96,128 (default: all)")
 	flag.Parse()
 	var err error
